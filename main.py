@@ -1,31 +1,37 @@
 # -*- coding: utf-8 -*-
+import logging
+from aiogram import Bot, Dispatcher, executor, types
 from deeppavlov import configs, build_model
+import utils
+
+def ner_tagging_ret(message): #generator
+    model_output = model([message])
+    print(model_output)
+    array_output = utils.grouping(list(utils.unpackaging(model_output)))
+    print(array_output)
+    return ' '.join(utils.unpackaging(array_output))
 
 
-def ner_tagging(array_output):
-    model_output = model(array_output)
-    array_output = []
-    for ind,elem in enumerate(model_output[1][0]):
-        if elem != 'O':
-            array_output.append(model_output[0][0][ind])
-            array_output.append('(' + elem + ')')
-        else:
-            array_output.append(model_output[0][0][ind])
-    with open(r"C:\Users\Максим\PycharmProjects\BERT_with_CUDA\text.txt", "a", encoding="utf-8") as file:
-        file.write(' '.join(array_output))
-        file.write('<SEPARATE>' + '\n')
+API_TOKEN = '1946554521:AAEVXzv9YHmwn9X5o0M9YqAFStIagMbh7uc'
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
+
+
+@dp.message_handler(commands=['start'])
+async def greetings(message: types.Message):
+    await message.answer("Hi! I'm all yours to get tags you badly needed.")
+
+
+@dp.message_handler()
+async def echo(message: types.Message):
+    answer = ner_tagging_ret(message.text)
+    await message.answer(answer)
+
 
 model = build_model(configs.ner.ner_ontonotes_bert_mult, download=True)
-buf = []
-array_output = []
-with open(r"C:\Users\Максим\PycharmProjects\BERT_with_CUDA\Unprocessed.txt", "r", encoding = "utf-8" ) as file:
-    for line in file:
-        if '<SEPARATE>' in line:
-            array_output.append(''.join(buf))
-            ner_tagging(array_output)
-            array_output = []
-            buf = []
-        else:
-            buf.append(line)
 
-print("Done!")
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
