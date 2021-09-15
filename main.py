@@ -1,42 +1,40 @@
 import utils
 from deeppavlov import configs, build_model
 
-
-def ner_tagging_ret(message, model):
-    """
-    Function performs NER-markup.
-    :param message: object of types.Message type from aiogram.
-    :param model: NER-model from deeppavlov.
-    :return: object of str type with NER-tagging.
-    """
-    model_output = model([message])
-    array_output = utils.grouping(list(utils.unpacking(model_output)))
-    return ' '.join(utils.unpacking(array_output))
+#model = build_model(configs.squad.squad, download=True)
+model = build_model(configs.squad.squad_ru_bert, download=True)
 
 
-def ner_tagging(array_output):
-    model_output = model(array_output)
-    array_output = []
-    for ind, elem in enumerate(model_output[1][0]):
-        if elem != 'O':
-            array_output.append(model_output[0][0][ind])
-            array_output.append('(' + elem + ')')
-        else:
-            array_output.append(model_output[0][0][ind])
-    with open(r"C:\Users\Максим\PycharmProjects\BERT_with_CUDA\text.txt", "a", encoding="utf-8") as file:
-        file.write(' '.join(array_output))
-        file.write('<SEPARATE>' + '\n')
+def answer(text, question):
+    print(question.strip('\n'))
+    print(model([text,], [question,])[0][0])
+    print(model([text, ], [question, ]))
 
 
-model = build_model(configs.ner.ner_rus_bert, download=False)
-buf = []
-array_output = []
-with open(r"C:\Users\Максим\PycharmProjects\BERT_with_CUDA\Unprocessed.txt", "r", encoding = "utf-8" ) as file:
-    for line in file:
-        if '<SEPARATE>' in line:
-            array_output.append(''.join(buf))
-            ner_tagging(array_output)
-            array_output = []
-            buf = []
-        else:
-            buf.append(line)
+def get_texts(filepath):
+    texts = []
+    text = []
+    buf = []
+    with open(filepath, "r", encoding="utf-8") as file:
+        for line in file:
+            if '<SEPARATE>' in line:
+                for question in buf:
+                    text.append(question)
+                texts.append(text)
+                text = []
+                buf = []
+            elif '<QUESTIONS>' in line:
+                text.append(''.join(buf))
+                buf = []
+            else:
+                buf.append(line)
+    return texts
+
+
+texts = get_texts(r"C:\Users\Максим\PycharmProjects\BERT_with_CUDA\text_QA.txt")
+
+for text in texts:
+    print("\nТЕКСТ:\n" + text[0].strip("\n"))
+    for question in text[1:]:
+        print("ВОПРОС:")
+        answer(text[0], question)
